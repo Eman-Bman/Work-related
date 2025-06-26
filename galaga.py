@@ -54,6 +54,14 @@ playerExplosions_rects = [
 playerExplosions = [pygame.Surface((rect.width, rect.height), pygame.SRCALPHA) for rect in playerExplosions_rects]
 for i, rect in enumerate(playerExplosions_rects):
     playerExplosions[i].blit(sprite_sheet, (0, 0), rect)
+tractor_rects = [
+    pygame.Rect(289, 36, 48, 80), # Frame 1
+    pygame.Rect(339, 36, 48, 80), # Frame 2
+    pygame.Rect(389, 36, 48, 80) # Frame 3
+]
+tractor = [pygame.Surface((rect.width, rect.height), pygame.SRCALPHA) for rect in tractor_rects]
+for i, rect in enumerate(tractor_rects):
+    tractor[i].blit(sprite_sheet, (0, 0), rect)
 
 text_sheet = pygame.image.load("Text.png").convert_alpha()
 text_sheet.set_colorkey(BLACK)
@@ -64,6 +72,7 @@ speed = 2
 score = 0
 stage = 1
 Ups = 1
+turnAng = 5 
 shots=[]
 enemyShots=[]
 playerHits=[]
@@ -71,24 +80,24 @@ rem=[]
 hits=[]
 active=[]
 
-# enemy setup [posX, posY, HP, AI, angle]
+# enemy setup [posX, posY, HP, AI, angle, targetX, extra]
 zakoPos=[]
 for i in range(20):
-    zakoPos.append([120,0,1,0,0])
+    zakoPos.append([120,0,1,0,0,0,0])
 goeiPos=[]
 for i in range(16):
-    goeiPos.append([120,0,1,0,0])
+    goeiPos.append([120,0,1,0,0,0,0])
 bossPos=[]
 for i in range(4):
-    bossPos.append([120,0,2,0,0])
+    bossPos.append([120,0,2,0,0,0,0])
 playerPos=[120,280]
 
 # functions
 def reset_enemies():
     global zakoPos, goeiPos, bossPos
-    zakoPos = [[120, 0, 1, 0, 0] for _ in range(20)]
-    goeiPos = [[120, 0, 1, 0, 0] for _ in range(16)]
-    bossPos = [[120, 0, 2, 0, 0] for _ in range(4)]
+    zakoPos = [[120, 0, 1, 0, 0,0,0] for _ in range(20)]
+    goeiPos = [[120, 0, 1, 0, 0,0,0] for _ in range(16)]
+    bossPos = [[120, 0, 2, 0, 0,0,0] for _ in range(4)]
 def write(text, x, y, color):
     for i in range(len(text)):
         if text[i] in letteridx:
@@ -142,11 +151,11 @@ while running:
             living[0]+=1
             clear=False
     for i in range(len(goeiPos)):
-        if goeiPos[i][2]>0:
+        if goeiPos[i][2]>0 and goeiPos[i][3]==0:
             living[1]+=1
             clear=False
     for i in range(len(bossPos)):
-        if bossPos[i][2]>0:
+        if bossPos[i][2]>0 and bossPos[i][3]==0:
             living[2]+=1
             clear=False
     if tick % 60 == 0 and clear:
@@ -155,7 +164,7 @@ while running:
         score += stage * 1000
     if lives == 0:
         break
-    if score >= Ups * 20000:
+    if score >= Ups * 50000 - 30000:
         Ups += 1
         lives += 1
         if lives > 5:
@@ -190,38 +199,58 @@ while running:
         screen.blit(enemyShot,(enemyShots[i][0]-8,enemyShots[i][1]-8))
     for i in range(20):
         if zakoPos[i][2]>0:
-            if zakoPos[i][3]==0:
+            if zakoPos[i][3]!=1:
                 corPos=[i%10*18+39,m.floor(i/10)*18+88]
                 deltPos=[corPos[0]-zakoPos[i][0],corPos[1]-zakoPos[i][1]]
                 if m.sqrt(deltPos[0]**2+deltPos[1]**2)<4:
+                    if zakoPos[i][3]==2:
+                        zakoPos[i][3]=0
+                        active[:] = [a for a in active if not (a[0]=="zako" and a[1]==i)]
                     zakoPos[i][0]=corPos[0]
                     zakoPos[i][1]=corPos[1]
                 else:
                     angle=m.atan2(deltPos[1],deltPos[0])
                     zakoPos[i][0]+=m.cos(angle)*4
                     zakoPos[i][1]+=m.sin(angle)*4
-                if tick%4==0 and r.random()<0.01:
+                if tick%4==0 and r.random()<0.005:
                     enemyShots.append([zakoPos[i][0],zakoPos[i][1]])
             if zakoPos[i][3]==1:
-                for j in active:
-                    if j[0]=="zako" and j[1]==i:
-                        if zakoPos[i][4]==0:
-                            if j[2]<zakoPos[i][0]:
-                                zakoPos[i][4]+=15  # increase angle clockwise
-                                zakoPos[i][0] += m.sin(m.radians(zakoPos[i][4])) * 2  # x increases right
-                                zakoPos[i][1] += m.cos(m.radians(zakoPos[i][4])) * 2  # y increases down
-                            elif j[2]>zakoPos[i][0]:
-                                zakoPos[i][4]-=15
-                                zakoPos[i][0]-=m.sin(m.radians(zakoPos[i][4]))*2
-                                zakoPos[i][1]-=m.cos(m.radians(zakoPos[i][4]))*2
-                        elif zakoPos[i][0]<j[2]:
-                            zakoPos[i][4]+=15 # increase angle to the right
-                            zakoPos[i][0]+=m.sin(m.radians(zakoPos[i][4]))*2
-                            zakoPos[i][1]-=m.cos(m.radians(zakoPos[i][4]))*2
-                        elif zakoPos[i][0]>j[2]:
-                            zakoPos[i][4]-=15
-                            zakoPos[i][0]-=m.sin(m.radians(zakoPos[i][4]))*2
-                            zakoPos[i][1]-=m.cos(m.radians(zakoPos[i][4]))*2
+                if tick%4==0 and r.random()<0.015:
+                    enemyShots.append([zakoPos[i][0],zakoPos[i][1]])
+                if abs(zakoPos[i][4])>=215 and abs(zakoPos[i][4])<=500:
+                    if abs(zakoPos[i][0]-zakoPos[i][5])<4:
+                        zakoPos[i][4]=540
+                    else:
+                        zakoPos[i][0]+=m.sin(m.radians(zakoPos[i][4]))*2
+                        zakoPos[i][1]-=m.cos(m.radians(zakoPos[i][4]))*2
+                        if zakoPos[i][1]>320:
+                            zakoPos[i][3]=2
+                            zakoPos[i][4]=0
+                            zakoPos[i][5]=0
+                elif zakoPos[i][4]==540:
+                    if zakoPos[i][1]>320:
+                        zakoPos[i][3]=2
+                        zakoPos[i][4]=0
+                        zakoPos[i][5]=0
+                    else:
+                        zakoPos[i][1]+=4
+                elif zakoPos[i][4]==0:
+                    if zakoPos[i][5]<zakoPos[i][0]:
+                        zakoPos[i][4]+=turnAng*2  # increase angle clockwise
+                        zakoPos[i][0] += m.sin(m.radians(zakoPos[i][4])) * 2  # x increases right
+                        zakoPos[i][1] += m.cos(m.radians(zakoPos[i][4])) * 2  # y increases down
+                    elif zakoPos[i][5]>zakoPos[i][0]:
+                        zakoPos[i][4]-=turnAng*2
+                        zakoPos[i][0]-=m.sin(m.radians(zakoPos[i][4]))*2
+                        zakoPos[i][1]-=m.cos(m.radians(zakoPos[i][4]))*2
+                elif 0<zakoPos[i][4]:
+                    zakoPos[i][4]+=turnAng
+                    zakoPos[i][0]+=m.sin(m.radians(zakoPos[i][4]))*2
+                    zakoPos[i][1]-=m.cos(m.radians(zakoPos[i][4]))*2
+                elif 0>zakoPos[i][4]:
+                    zakoPos[i][4]-=turnAng
+                    zakoPos[i][0]-=m.sin(m.radians(zakoPos[i][4]))*2
+                    zakoPos[i][1]-=m.cos(m.radians(zakoPos[i][4]))*2
             for j in range(len(shots)):
                 if m.sqrt((shots[j][0]-zakoPos[i][0])**2+(shots[j][1]-zakoPos[i][1])**2)<8:
                     zakoPos[i][2]-=1
@@ -234,6 +263,7 @@ while running:
                         hits.append([zakoPos[i][0],zakoPos[i][1],100,60])
                         score+=100
                         zakoPos[i][2]-=1
+                    active[:] = [a for a in active if not (a[0]=="zako" and a[1]==i)]
             if zakoPos[i][2]>0:
                 screen.blit(zako,(zakoPos[i][0]-8,zakoPos[i][1]-8))
     for i in range(16):
@@ -248,13 +278,58 @@ while running:
                     angle=m.atan2(deltPos[1],deltPos[0])
                     goeiPos[i][0]+=m.cos(angle)*4
                     goeiPos[i][1]+=m.sin(angle)*4
-                if tick%4==0 and r.random()<0.01:
+                if tick%4==0 and r.random()<0.005:
                     enemyShots.append([goeiPos[i][0],goeiPos[i][1]])
-            else:
-                goeiPos[i][3]=0
-                for j in active:
-                    if j[0]=="goei" and j[1]==i:
-                        active.pop(active.index(j))
+            if goeiPos[i][3]==1:
+                if tick%4==0 and r.random()<0.015:
+                    enemyShots.append([goeiPos[i][0],goeiPos[i][1]])
+                if abs(goeiPos[i][4])>=215 and abs(goeiPos[i][4])<=500:
+                    if abs(goeiPos[i][0]-goeiPos[i][5])<4:
+                        goeiPos[i][4]=540
+                    else:
+                        goeiPos[i][0]+=m.sin(m.radians(goeiPos[i][4]))*2
+                        goeiPos[i][1]-=m.cos(m.radians(goeiPos[i][4]))*2
+                        if goeiPos[i][6]==0 and r.random()<0.1:
+                            goeiPos[i][6]=r.randint(-5,5)
+                        if goeiPos[i][6]<0:
+                            goeiPos[i][6]+=1
+                        elif goeiPos[i][6]>0:
+                            goeiPos[i][6]-=1
+                        goeiPos[i][0]+=goeiPos[i][6]
+                        if goeiPos[i][1]>320:
+                            goeiPos[i][1]=0
+                            goeiPos[i][3]=0
+                            goeiPos[i][4]=0
+                            goeiPos[i][5]=0
+                            goeiPos[i][6]=0
+                            active[:] = [a for a in active if not (a[0]=="goei" and a[1]==i)]
+                elif goeiPos[i][4]==540:
+                    if goeiPos[i][1]>320:
+                        goeiPos[i][1]=0
+                        goeiPos[i][3]=0
+                        goeiPos[i][4]=0
+                        goeiPos[i][5]=0
+                        goeiPos[i][6]=0
+                        active[:] = [a for a in active if not (a[0]=="goei" and a[1]==i)]
+                    else:
+                        goeiPos[i][1]+=4
+                elif goeiPos[i][4]==0:
+                    if goeiPos[i][5]<goeiPos[i][0]:
+                        goeiPos[i][4]+=turnAng*2  # increase angle clockwise
+                        goeiPos[i][0] += m.sin(m.radians(goeiPos[i][4])) * 2  # x increases right
+                        goeiPos[i][1] += m.cos(m.radians(goeiPos[i][4])) * 2  # y increases down
+                    elif goeiPos[i][5]>goeiPos[i][0]:
+                        goeiPos[i][4]-=turnAng*2
+                        goeiPos[i][0]-=m.sin(m.radians(goeiPos[i][4]))*2
+                        goeiPos[i][1]-=m.cos(m.radians(goeiPos[i][4]))*2
+                elif 0<goeiPos[i][4]:
+                    goeiPos[i][4]+=turnAng
+                    goeiPos[i][0]+=m.sin(m.radians(goeiPos[i][4]))*2
+                    goeiPos[i][1]-=m.cos(m.radians(goeiPos[i][4]))*2
+                elif 0>goeiPos[i][4]:
+                    goeiPos[i][4]-=turnAng
+                    goeiPos[i][0]-=m.sin(m.radians(goeiPos[i][4]))*2
+                    goeiPos[i][1]-=m.cos(m.radians(goeiPos[i][4]))*2
             for j in range(len(shots)):
                 if m.sqrt((shots[j][0]-goeiPos[i][0])**2+(shots[j][1]-goeiPos[i][1])**2)<8:
                     goeiPos[i][2]-=1
@@ -267,23 +342,78 @@ while running:
                         hits.append([goeiPos[i][0],goeiPos[i][1],160,60])
                         score+=160
                         goeiPos[i][2]-=1
+                    active[:] = [a for a in active if not (a[0]=="goei" and a[1]==i)]
             if goeiPos[i][2]>0:
                 screen.blit(goei,(goeiPos[i][0]-8,goeiPos[i][1]-8))
     for i in range(4):
-        if bossPos[i][2]>0:
-            if bossPos[i][3]==0:
+        if bossPos[i][2]!=0:
+            if bossPos[i][3]==0 or bossPos[i][3]==3:
                 corPos=[i*18+93,34]
                 deltPos=[corPos[0]-bossPos[i][0],corPos[1]-bossPos[i][1]]
                 if m.sqrt(deltPos[0]**2+deltPos[1]**2)<4:
                     bossPos[i][0]=corPos[0]
                     bossPos[i][1]=corPos[1]
+                    if bossPos[i][3]==3:
+                        bossPos[i][3]=0
+                        bossPos[i][4]=0
+                        bossPos[i][5]=0
+                        bossPos[i][6]=0
+                        active[:] = [a for a in active if not (a[0]=="boss" and a[1]==i)]
                 else:
                     angle=m.atan2(deltPos[1],deltPos[0])
                     bossPos[i][0]+=m.cos(angle)*4
                     bossPos[i][1]+=m.sin(angle)*4
-            else:
-                bossPos[i][3]=0
-                active.pop(active.index(["boss", i, playerPos[0]]))
+            elif bossPos[i][3]==1:
+                if bossPos[i][1]>196:
+                    if bossPos[i][0]<bossPos[i][5]:
+                        bossPos[i][4]=810
+                    else:
+                        bossPos[i][4]=630
+                if abs(bossPos[i][4])>=215 and abs(bossPos[i][4])<=500:
+                    if abs(bossPos[i][0]-bossPos[i][5])<4:
+                        bossPos[i][4]=540
+                    else:
+                        bossPos[i][0]+=m.sin(m.radians(bossPos[i][4]))*2
+                        bossPos[i][1]-=m.cos(m.radians(bossPos[i][4]))*2
+                elif bossPos[i][4]==810 or bossPos[i][4]==630:
+                        bossPos[i][0]+=m.sin(m.radians(bossPos[i][4]))*2
+                        bossPos[i][1]-=m.cos(m.radians(bossPos[i][4]))*2
+                        if bossPos[i][0]-bossPos[i][5]<4 and bossPos[i][1]>196:
+                            bossPos[i][3]=2
+                            bossPos[i][4]=0
+                            bossPos[i][5]=0
+                            bossPos[i][6]=120
+                elif bossPos[i][4]==540:
+                    if bossPos[i][1]>320:
+                        bossPos[i][3]=2
+                        bossPos[i][4]=0
+                        bossPos[i][5]=0
+                        active[:] = [a for a in active if not (a[0]=="boss" and a[1]==i)]
+                    else:
+                        bossPos[i][1]+=4
+                elif bossPos[i][4]==0:
+                    if bossPos[i][5]<bossPos[i][0]:
+                        bossPos[i][4]+=turnAng*2  # increase angle clockwise
+                        bossPos[i][0] += m.sin(m.radians(bossPos[i][4])) * 2  # x increases right
+                        bossPos[i][1] += m.cos(m.radians(bossPos[i][4])) * 2  # y increases down
+                    elif bossPos[i][5]>bossPos[i][0]:
+                        bossPos[i][4]-=turnAng*2
+                        bossPos[i][0]-=m.sin(m.radians(bossPos[i][4]))*2
+                        bossPos[i][1]-=m.cos(m.radians(bossPos[i][4]))*2
+                elif 0<bossPos[i][4]:
+                    bossPos[i][4]+=turnAng
+                    bossPos[i][0]+=m.sin(m.radians(bossPos[i][4]))*2
+                    bossPos[i][1]-=m.cos(m.radians(bossPos[i][4]))*2
+                elif 0>bossPos[i][4]:
+                    bossPos[i][4]-=turnAng
+                    bossPos[i][0]-=m.sin(m.radians(bossPos[i][4]))*2
+                    bossPos[i][1]-=m.cos(m.radians(bossPos[i][4]))*2
+            elif bossPos[i][3]==2:
+                if bossPos[i][6]>0:
+                    bossPos[i][6]-=1
+                if bossPos[i][6]==0:
+                    bossPos[i][3]=3
+                    active[:] = [a for a in active if not (a[0]=="boss" and a[1]==i)]
             for j in range(len(shots)):
                 if m.sqrt((shots[j][0]-bossPos[i][0])**2+(shots[j][1]-bossPos[i][1])**2)<8:
                     bossPos[i][2]-=1
@@ -295,10 +425,31 @@ while running:
                         else:
                             hits.append([bossPos[i][0],bossPos[i][1],400,60])
                             score+=400
+                        active[:] = [a for a in active if not (a[0]=="boss" and a[1]==i)]
             if bossPos[i][2]==2:
                 screen.blit(bossFull,(bossPos[i][0]-8,bossPos[i][1]-8))
             elif bossPos[i][2]==1:
                 screen.blit(bossHalf,(bossPos[i][0]-8,bossPos[i][1]-8))
+            if bossPos[i][3]==2:
+                if bossPos[i][6]>0:
+                    screen.blit(tractor[m.floor(bossPos[i][6]/5)%3], (bossPos[i][0]-24, bossPos[i][1]+8))
+    #check for collisions
+    for i in range(len(zakoPos)):
+        if m.sqrt((zakoPos[i][0]-playerPos[0])**2+(zakoPos[i][1]-playerPos[1])**2)<8 and len(playerHits)<1 and zakoPos[i][2]>0:
+            lives-=1
+            zakoPos[i][2]=0
+            playerHits.append([playerPos[0],playerPos[1],0,60])
+    for i in range(len(goeiPos)):
+        if m.sqrt((goeiPos[i][0]-playerPos[0])**2+(goeiPos[i][1]-playerPos[1])**2)<8 and len(playerHits)<1 and goeiPos[i][2]>0:
+            lives-=1
+            goeiPos[i][2]=0
+            playerHits.append([playerPos[0],playerPos[1],0,60])
+    for i in range(len(bossPos)):
+        if bossPos[i][1]>196 and bossPos[i][2]>0:
+            if m.sqrt((bossPos[i][0]-playerPos[0])**2)<8 and len(playerHits)<1:
+                lives-=1
+                playerHits.append([playerPos[0],playerPos[1],0,60])
+
     rem=[]
     for i in range(len(hits)):
         if hits[i][3]<=0:
@@ -337,27 +488,32 @@ while running:
     scorestr = str(score)
     if len(active)<3 and tick % 30 == 0 and len(active)<living[0]+living[1]+living[2]:
         nextActive= r.randint(0, living[0] + living[1] + living[2] - 1)
+        for i in range(len(bossPos)):
+            if bossPos[i][2]>0:
+                if nextActive==0:
+                    active.append(["boss", i])
+                    bossPos[i][3]=1
+                    bossPos[i][5]=playerPos[0]
+                    break
+                nextActive-=1
         for i in range(len(zakoPos)):
             if zakoPos[i][2]>0:
                 if nextActive==0:
-                    active.append(["zako", i, playerPos[0]])
+                    active.append(["zako", i])
                     zakoPos[i][3]=1
+                    zakoPos[i][5]=playerPos[0]
                     break
                 nextActive-=1
         for i in range(len(goeiPos)):
             if goeiPos[i][2]>0:
                 if nextActive==0:
-                    active.append(["goei", i, playerPos[0]])
+                    active.append(["goei", i])
                     goeiPos[i][3]=1
+                    goeiPos[i][5]=playerPos[0]
                     break
                 nextActive-=1
-        for i in range(len(bossPos)):
-            if bossPos[i][2]>0:
-                if nextActive==0:
-                    active.append(["boss", i, playerPos[0]])
-                    bossPos[i][3]=1
-                    break
-                nextActive-=1
+    if len(active)>3:
+        active.pop(3)
 
     while len(scorestr) < 6:
         scorestr = "0" + scorestr
