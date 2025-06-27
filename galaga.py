@@ -62,6 +62,16 @@ tractor_rects = [
 tractor = [pygame.Surface((rect.width, rect.height), pygame.SRCALPHA) for rect in tractor_rects]
 for i, rect in enumerate(tractor_rects):
     tractor[i].blit(sprite_sheet, (0, 0), rect)
+extra_sheet = pygame.image.load("Powerups.png").convert_alpha()
+powerup_rects = [
+    pygame.Rect(1, 1, 8, 8),
+    pygame.Rect(10, 1, 8, 8),
+    pygame.Rect(19, 1, 8, 8),
+    pygame.Rect(28, 1, 8, 8)
+]
+powerup = [pygame.Surface((rect.width, rect.height), pygame.SRCALPHA) for rect in powerup_rects]
+for i, rect in enumerate(powerup_rects):
+    powerup[i].blit(extra_sheet, (0, 0), rect)
 
 text_sheet = pygame.image.load("Text.png").convert_alpha()
 text_sheet.set_colorkey(BLACK)
@@ -79,7 +89,7 @@ playerHits=[]
 rem=[]
 hits=[]
 active=[]
-powerup=[]
+powerupList=[]
 
 # enemy setup [posX, posY, HP, AI, angle, targetX, extra]
 zakoData=[]
@@ -463,8 +473,8 @@ while running:
     for i in rem:
         hits.pop(i)
     for i in range(len(hits)):
-        if hits[i][3]==90 and r.random()<1:
-            powerup.append([hits[i][0], hits[i][1], r.randint(1, 4)])
+        if hits[i][3]==50 and r.random()<1:
+            powerupList.append([hits[i][0], hits[i][1], r.randint(0, 3)])
         hits[i][3]-=1
         if hits[i][3]/60>.75:
             screen.blit(explosions[0], (hits[i][0]-16, hits[i][1]-16))
@@ -475,26 +485,26 @@ while running:
         elif hits[i][3]/60>0:
             screen.blit(explosions[3], (hits[i][0]-16, hits[i][1]-16))
     rem=[]
-    for i in range(len(powerup)):
-        if powerup[i][1]>320:
+    for i in range(len(powerupList)):
+        if powerupList[i][1]>320:
             rem.append(i)
-    for i in range(len(powerup)):
-        if m.sqrt((powerup[i][0]-playerData[0])**2+(powerup[i][1]-playerData[1])**2)<8 and len(playerHits)<1:
-            if powerup[i][2]==1:
+    for i in range(len(powerupList)):
+        if m.sqrt((powerupList[i][0]-playerData[0])**2+(powerupList[i][1]-playerData[1])**2)<8 and len(playerHits)<1:
+            if powerupList[i][2]==1:
                 playerData[2]+=1
-            elif powerup[i][2]==2:
+            elif powerupList[i][2]==2:
                 playerData[3]+=1
-            elif powerup[i][2]==3:
+            elif powerupList[i][2]==3:
                 playerData[4]+=1
-            elif powerup[i][2]==4:
+            elif powerupList[i][2]==4:
                 playerData[5]+=1
             rem.append(i)
         else:
-            powerup[i][1]+=4
-            screen.blit(laser,(powerup[i][0]-8,powerup[i][1]-8))
+            powerupList[i][1]+=1
+            screen.blit(powerup[powerupList[i][2]],(powerupList[i][0]-8,powerupList[i][1]-8))
     rem.reverse()
     for i in rem:
-        powerup.pop(i)
+        powerupList.pop(i)
     for i in range(len(enemyShots)):
         if m.sqrt((enemyShots[i][0]-playerData[0])**2+(enemyShots[i][1]-playerData[1])**2)<8 and len(playerHits)<1:
             lives-=1
